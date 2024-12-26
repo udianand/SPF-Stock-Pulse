@@ -52,36 +52,48 @@ def format_data_for_download(hist_data):
 
 def get_news_sentiment(symbol):
     """
-    Fetch news and perform sentiment analysis
+    Fetch news and perform sentiment analysis with timeline data
     """
     try:
         stock = yf.Ticker(symbol)
         news = stock.news
 
         if not news:
-            return pd.DataFrame(), 0
+            return pd.DataFrame(), 0, pd.DataFrame()
 
         # Process each news item
         processed_news = []
-        for item in news[:10]:  # Analyze last 10 news items
+        for item in news:  # Process all available news items
             title = item.get('title', '')
+            timestamp = item.get('providerPublishTime', 0)
+            date = datetime.fromtimestamp(timestamp)
             blob = TextBlob(title)
             sentiment = blob.sentiment.polarity
 
             processed_news.append({
-                'Date': datetime.fromtimestamp(item['providerPublishTime']).strftime('%Y-%m-%d'),
+                'Timestamp': date,
+                'Date': date.strftime('%Y-%m-%d'),
+                'Time': date.strftime('%H:%M:%S'),
                 'Title': title,
                 'Sentiment': sentiment,
                 'Sentiment Label': 'Positive' if sentiment > 0 else 'Negative' if sentiment < 0 else 'Neutral'
             })
 
-        # Create DataFrame
+        # Create DataFrame and sort by timestamp
         news_df = pd.DataFrame(processed_news)
+        if not news_df.empty:
+            news_df = news_df.sort_values('Timestamp')
 
-        # Calculate overall sentiment
-        overall_sentiment = news_df['Sentiment'].mean()
+            # Calculate overall sentiment
+            overall_sentiment = news_df['Sentiment'].mean()
 
-        return news_df, overall_sentiment
+            # Create timeline data
+            timeline_df = news_df.copy()
+            timeline_df['Cumulative Sentiment'] = timeline_df['Sentiment'].expanding().mean()
+
+            return news_df, overall_sentiment, timeline_df
+
+        return pd.DataFrame(), 0, pd.DataFrame()
     except Exception as e:
         print(f"Error fetching news: {str(e)}")
-        return pd.DataFrame(), 0
+        return pd.DataFrame(), 0, pd.DataFrame()

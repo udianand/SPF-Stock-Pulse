@@ -75,12 +75,53 @@ if symbol:
 
         # Sentiment Analysis Section
         st.subheader("News Sentiment Analysis")
-        news_df, overall_sentiment = get_news_sentiment(symbol)
+        news_df, overall_sentiment, timeline_df = get_news_sentiment(symbol)
 
         if not news_df.empty:
             # Display overall sentiment
             sentiment_color = "green" if overall_sentiment > 0 else "red" if overall_sentiment < 0 else "gray"
             st.markdown(f"### Overall Sentiment Score: <span style='color:{sentiment_color}'>{overall_sentiment:.2f}</span>", unsafe_allow_html=True)
+
+            # Interactive Sentiment Timeline
+            st.subheader("Sentiment Timeline")
+            fig_timeline = go.Figure()
+
+            # Add sentiment points
+            fig_timeline.add_trace(go.Scatter(
+                x=timeline_df['Timestamp'],
+                y=timeline_df['Sentiment'],
+                mode='markers',
+                name='Individual Sentiment',
+                marker=dict(
+                    size=8,
+                    color=timeline_df['Sentiment'].apply(
+                        lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
+                    )
+                ),
+                hovertemplate="<br>".join([
+                    "Date: %{x}",
+                    "Sentiment: %{y:.2f}",
+                ])
+            ))
+
+            # Add moving average line
+            fig_timeline.add_trace(go.Scatter(
+                x=timeline_df['Timestamp'],
+                y=timeline_df['Cumulative Sentiment'],
+                mode='lines',
+                name='Cumulative Average Sentiment',
+                line=dict(color='blue', width=2)
+            ))
+
+            fig_timeline.update_layout(
+                title="News Sentiment Timeline",
+                xaxis_title="Date",
+                yaxis_title="Sentiment Score",
+                hovermode='x unified',
+                template='plotly_white',
+                height=400
+            )
+            st.plotly_chart(fig_timeline, use_container_width=True)
 
             # Display sentiment distribution
             sentiment_counts = news_df['Sentiment Label'].value_counts()
@@ -92,7 +133,7 @@ if symbol:
             st.markdown("### Recent News Headlines")
             for _, row in news_df.iterrows():
                 sentiment_color = "green" if row['Sentiment'] > 0 else "red" if row['Sentiment'] < 0 else "gray"
-                st.markdown(f"**{row['Date']}**: {row['Title']} - Sentiment: <span style='color:{sentiment_color}'>{row['Sentiment']:.2f}</span>", unsafe_allow_html=True)
+                st.markdown(f"**{row['Date']} {row['Time']}**: {row['Title']} - Sentiment: <span style='color:{sentiment_color}'>{row['Sentiment']:.2f}</span>", unsafe_allow_html=True)
         else:
             st.warning("No recent news available for sentiment analysis.")
 
