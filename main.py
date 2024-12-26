@@ -5,6 +5,7 @@ import pandas as pd
 from utils import get_stock_data, get_key_metrics, format_data_for_download, get_news_sentiment
 import io
 from plotly.subplots import make_subplots
+from strategy_simulator import InvestmentStrategy
 
 # Page config
 st.set_page_config(
@@ -40,7 +41,7 @@ with st.sidebar:
 # Main content
 if symbols:
     # Create tabs for different analysis views
-    tab1, tab2 = st.tabs(["Individual Analysis", "Comparison Analysis"])
+    tab1, tab2, tab3 = st.tabs(["Individual Analysis", "Comparison Analysis", "Strategy Simulator"])
 
     with tab1:
         # Individual stock analysis
@@ -179,8 +180,8 @@ if symbols:
 
                 # Create side-by-side sentiment timeline comparison
                 fig = make_subplots(rows=len(symbols), cols=1,
-                                  subplot_titles=[f"{sym} Sentiment Timeline" for sym in symbols],
-                                  vertical_spacing=0.1)
+                                    subplot_titles=[f"{sym} Sentiment Timeline" for sym in symbols],
+                                    vertical_spacing=0.1)
 
                 for i, symbol in enumerate(symbols, 1):
                     if symbol in sentiments and not sentiments[symbol]['timeline'].empty:
@@ -237,5 +238,97 @@ if symbols:
                 st.error("Could not fetch data for both stocks. Please check the symbols.")
         else:
             st.info("Please enter at least two stock symbols for comparison analysis.")
+    with tab3:
+        if len(symbols) > 0:
+            st.header("Investment Strategy Simulator")
+
+            # Simulation parameters
+            st.subheader("Simulation Parameters")
+            col1, col2 = st.columns(2)
+            with col1:
+                initial_capital = st.number_input("Initial Capital ($)", 
+                                               min_value=1000.0, 
+                                               value=10000.0, 
+                                               step=1000.0)
+
+            # Run simulation button
+            if st.button("Run Simulation", key="run_sim"):
+                # Get data for the selected stock
+                symbol = symbols[0]  # Use first selected stock
+                hist_data, _ = get_stock_data(symbol, start_date, end_date)
+                _, _, sentiment_data = get_news_sentiment(symbol)
+
+                if hist_data is not None and not sentiment_data.empty:
+                    # Calculate technical indicators
+                    hist_data['SMA_20'] = hist_data['Close'].rolling(window=20).mean()
+                    hist_data['SMA_50'] = hist_data['Close'].rolling(window=50).mean()
+
+                    # Run simulation
+                    strategy = InvestmentStrategy(initial_capital=initial_capital)
+                    results = strategy.simulate(hist_data, sentiment_data)
+
+                    # Display results
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("Final Portfolio Value", 
+                              f"${results['final_value']:,.2f}")
+                    col2.metric("Total Return", 
+                              results['total_return_pct'])
+                    col3.metric("Sharpe Ratio", 
+                              f"{results['sharpe_ratio']:.2f}")
+
+                    # Portfolio value chart
+                    st.subheader("Portfolio Value Over Time")
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=results['portfolio_history']['dates'],
+                        y=results['portfolio_history']['values'],
+                        name='Portfolio Value',
+                        line=dict(color='blue')
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=results['portfolio_history']['dates'],
+                        y=results['portfolio_history']['cash'],
+                        name='Cash',
+                        line=dict(color='green', dash='dash')
+                    ))
+                    fig.update_layout(
+                        title="Portfolio Performance",
+                        xaxis_title="Date",
+                        yaxis_title="Value ($)",
+                        template='plotly_white',
+                        height=400
+                    )
+                    st.plotly_chart(fig, use_container_width=True, key="portfolio_performance")
+
+                    # Trade history
+                    st.subheader("Trade History")
+                    trades_df = pd.DataFrame(results['trades'])
+                    if not trades_df.empty:
+                        trades_df['profit'] = trades_df.apply(
+                            lambda x: -x['value'] if x['type'] == 'buy' else x['value'],
+                            axis=1
+                        )
+                        st.dataframe(trades_df[['date', 'type', 'shares', 'price', 'value']])
+                    else:
+                        st.info("No trades were executed during the simulation period.")
+
+                    # Additional metrics
+                    st.subheader("Risk Metrics")
+                    metrics_df = pd.DataFrame({
+                        'Metric': ['Initial Capital', 'Final Value', 'Total Return', 
+                                  'Sharpe Ratio', 'Max Drawdown', 'Number of Trades'],
+                        'Value': [f"${results['initial_capital']:,.2f}",
+                                 f"${results['final_value']:,.2f}",
+                                 results['total_return_pct'],
+                                 f"{results['sharpe_ratio']:.2f}",
+                                 results['max_drawdown_pct'],
+                                 results['trades_count']]
+                    })
+                    st.table(metrics_df)
+                else:
+                    st.error("Could not fetch required data for simulation. Please check the selected stock and date range.")
+        else:
+            st.info("Please enter at least one stock symbol to run the strategy simulation.")
+
 else:
     st.info("Please enter stock symbols to begin analysis.")
