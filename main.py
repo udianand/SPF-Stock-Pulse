@@ -81,7 +81,7 @@ if symbols:
                     template='plotly_white',
                     height=400
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key=f"price_chart_{symbol}")
 
                 # Sentiment Analysis Section
                 st.subheader("News Sentiment Analysis")
@@ -120,7 +120,7 @@ if symbols:
                         template='plotly_white',
                         height=300
                     )
-                    st.plotly_chart(fig_timeline, use_container_width=True)
+                    st.plotly_chart(fig_timeline, use_container_width=True, key=f"sentiment_timeline_{symbol}")
                 else:
                     st.warning("No recent news available for sentiment analysis.")
 
@@ -172,13 +172,13 @@ if symbols:
                     template='plotly_white',
                     height=500
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key="price_comparison")
 
                 # Sentiment Comparison
                 st.subheader("Sentiment Analysis Comparison")
 
                 # Create side-by-side sentiment timeline comparison
-                fig = make_subplots(rows=len(symbols), cols=1, 
+                fig = make_subplots(rows=len(symbols), cols=1,
                                   subplot_titles=[f"{sym} Sentiment Timeline" for sym in symbols],
                                   vertical_spacing=0.1)
 
@@ -220,7 +220,7 @@ if symbols:
                     showlegend=True,
                     template='plotly_white'
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key="sentiment_comparison")
 
                 # Metrics Comparison
                 st.subheader("Key Metrics Comparison")
