@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
-from utils import get_stock_data, get_key_metrics, format_data_for_download, get_news_sentiment
+from utils import get_stock_data, format_data_for_download, get_morningstar_metrics
 import io
 from plotly.subplots import make_subplots
 from strategy_simulator import InvestmentStrategy
@@ -84,46 +84,29 @@ if symbols:
                 )
                 st.plotly_chart(fig, use_container_width=True, key=f"price_chart_{symbol}")
 
-                # Sentiment Analysis Section
-                st.subheader("News Sentiment Analysis")
-                news_df, overall_sentiment, timeline_df = get_news_sentiment(symbol)
+                # Replace sentiment analysis section with Morningstar Report
+                st.subheader("Morningstar-Style Report")
 
-                if not news_df.empty:
-                    # Display overall sentiment
-                    sentiment_color = "green" if overall_sentiment > 0 else "red" if overall_sentiment < 0 else "gray"
-                    st.markdown(f"### Overall Sentiment Score: <span style='color:{sentiment_color}'>{overall_sentiment:.2f}</span>", unsafe_allow_html=True)
+                metrics_df = get_morningstar_metrics(stock_info)
+                if not metrics_df.empty:
+                    # Display metrics by category
+                    for category in metrics_df['Category'].unique():
+                        st.markdown(f"### {category}")
+                        category_metrics = metrics_df[metrics_df['Category'] == category]
 
-                    # Sentiment Timeline
-                    fig_timeline = go.Figure()
-                    fig_timeline.add_trace(go.Scatter(
-                        x=timeline_df.index,  # Use index instead of Timestamp column
-                        y=timeline_df['Sentiment'],
-                        mode='markers',
-                        name='Individual Sentiment',
-                        marker=dict(
-                            size=8,
-                            color=timeline_df['Sentiment'].apply(
-                                lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
-                            )
-                        )
-                    ))
-                    fig_timeline.add_trace(go.Scatter(
-                        x=timeline_df.index,  # Use index instead of Timestamp column
-                        y=timeline_df['Cumulative Sentiment'],
-                        mode='lines',
-                        name='Cumulative Average Sentiment',
-                        line=dict(color='blue', width=2)
-                    ))
-                    fig_timeline.update_layout(
-                        title="News Sentiment Timeline",
-                        xaxis_title="Date",
-                        yaxis_title="Sentiment Score",
-                        template='plotly_white',
-                        height=300
-                    )
-                    st.plotly_chart(fig_timeline, use_container_width=True, key=f"sentiment_timeline_{symbol}")
+                        # Create columns for metrics display
+                        cols = st.columns(2)
+                        for i, (_, row) in enumerate(category_metrics.iterrows()):
+                            col_idx = i % 2
+                            with cols[col_idx]:
+                                st.metric(
+                                    label=row['Metric'],
+                                    value=row['Value']
+                                )
+
+                        st.divider()
                 else:
-                    st.warning("No recent news available for sentiment analysis.")
+                    st.warning("Unable to fetch detailed metrics for this stock.")
 
                 st.divider()
 
@@ -133,20 +116,14 @@ if symbols:
 
             # Fetch data for both stocks
             stock_data = {}
-            sentiments = {}
 
             for symbol in symbols:
                 hist_data, stock_info = get_stock_data(symbol, start_date, end_date)
-                news_df, overall_sentiment, timeline_df = get_news_sentiment(symbol)
 
                 if hist_data is not None and stock_info is not None:
                     stock_data[symbol] = {
                         'hist_data': hist_data,
                         'info': stock_info
-                    }
-                    sentiments[symbol] = {
-                        'overall': overall_sentiment,
-                        'timeline': timeline_df
                     }
 
             if len(stock_data) >= 2:
@@ -175,69 +152,32 @@ if symbols:
                 )
                 st.plotly_chart(fig, use_container_width=True, key="price_comparison")
 
-                # Sentiment Comparison
-                st.subheader("Sentiment Analysis Comparison")
-
-                # Create side-by-side sentiment timeline comparison
-                fig = make_subplots(rows=len(symbols), cols=1,
-                                    subplot_titles=[f"{sym} Sentiment Timeline" for sym in symbols],
-                                    vertical_spacing=0.1)
-
-                for i, symbol in enumerate(symbols, 1):
-                    if symbol in sentiments and not sentiments[symbol]['timeline'].empty:
-                        timeline_df = sentiments[symbol]['timeline']
-
-                        # Add sentiment points
-                        fig.add_trace(
-                            go.Scatter(
-                                x=timeline_df.index,  # Use index instead of Timestamp column
-                                y=timeline_df['Sentiment'],
-                                mode='markers',
-                                name=f'{symbol} Sentiment',
-                                marker=dict(
-                                    size=8,
-                                    color=timeline_df['Sentiment'].apply(
-                                        lambda x: 'green' if x > 0 else 'red' if x < 0 else 'gray'
-                                    )
-                                )
-                            ),
-                            row=i, col=1
-                        )
-
-                        # Add moving average line
-                        fig.add_trace(
-                            go.Scatter(
-                                x=timeline_df.index,  # Use index instead of Timestamp column
-                                y=timeline_df['Cumulative Sentiment'],
-                                mode='lines',
-                                name=f'{symbol} Trend',
-                                line=dict(color='blue', width=2)
-                            ),
-                            row=i, col=1
-                        )
-
-                fig.update_layout(
-                    height=600,
-                    showlegend=True,
-                    template='plotly_white'
-                )
-                st.plotly_chart(fig, use_container_width=True, key="sentiment_comparison")
-
                 # Metrics Comparison
-                st.subheader("Key Metrics Comparison")
-
+                st.subheader("Fundamental Metrics Comparison")
                 metrics_comparison = []
                 for symbol in symbols:
-                    metrics_df = get_key_metrics(stock_data[symbol]['info'])
-                    metrics_comparison.append(metrics_df.set_index('Metric')['Value'].rename(symbol))
+                    metrics_df = get_morningstar_metrics(stock_data[symbol]['info'])
+                    if not metrics_df.empty:
+                        # Pivot the metrics for side-by-side comparison
+                        symbol_metrics = metrics_df.set_index(['Category', 'Metric'])['Value']
+                        metrics_comparison.append(symbol_metrics.rename(symbol))
 
-                comparison_df = pd.concat(metrics_comparison, axis=1)
-                st.table(comparison_df)
+                if metrics_comparison:
+                    comparison_df = pd.concat(metrics_comparison, axis=1)
+                    # Display metrics by category
+                    for category in metrics_df['Category'].unique():
+                        st.markdown(f"### {category}")
+                        category_metrics = comparison_df.loc[category]
+                        st.dataframe(category_metrics, use_container_width=True)
+                        st.divider()
+                else:
+                    st.warning("Unable to fetch comparison metrics for the selected stocks.")
 
             else:
                 st.error("Could not fetch data for both stocks. Please check the symbols.")
         else:
             st.info("Please enter at least two stock symbols for comparison analysis.")
+
     with tab3:
         if len(symbols) > 0:
             st.header("Investment Strategy Simulator")
@@ -256,16 +196,15 @@ if symbols:
                 # Get data for the selected stock
                 symbol = symbols[0]  # Use first selected stock
                 hist_data, _ = get_stock_data(symbol, start_date, end_date)
-                _, _, sentiment_data = get_news_sentiment(symbol)
 
-                if hist_data is not None and not sentiment_data.empty:
+                if hist_data is not None:
                     # Calculate technical indicators
                     hist_data['SMA_20'] = hist_data['Close'].rolling(window=20).mean()
                     hist_data['SMA_50'] = hist_data['Close'].rolling(window=50).mean()
 
                     # Run simulation
                     strategy = InvestmentStrategy(initial_capital=initial_capital)
-                    results = strategy.simulate(hist_data, sentiment_data)
+                    results = strategy.simulate(hist_data, pd.DataFrame())  # Empty sentiment data
 
                     # Display results
                     col1, col2, col3 = st.columns(3)

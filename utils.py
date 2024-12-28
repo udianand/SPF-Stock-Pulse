@@ -1,7 +1,6 @@
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
-from textblob import TextBlob
 import numpy as np
 
 def get_stock_data(symbol, start_date, end_date):
@@ -16,90 +15,68 @@ def get_stock_data(symbol, start_date, end_date):
         print(f"Error fetching stock data: {str(e)}")
         return None, None
 
-def get_news_sentiment(symbol):
+def get_morningstar_metrics(stock_info):
     """
-    Fetch news and perform sentiment analysis with timeline data
-    Returns: news_df, overall_sentiment, timeline_df
+    Extract and format comprehensive financial metrics in Morningstar style
     """
-    try:
-        stock = yf.Ticker(symbol)
-        news = stock.news
+    if not stock_info:
+        return pd.DataFrame()
 
-        if not news:
-            print(f"No news found for {symbol}")
-            return pd.DataFrame(), 0, pd.DataFrame()
+    metrics = {
+        'Valuation': {
+            'Market Cap': stock_info.get('marketCap', 'N/A'),
+            'Enterprise Value': stock_info.get('enterpriseValue', 'N/A'),
+            'P/E Ratio': stock_info.get('trailingPE', 'N/A'),
+            'Forward P/E': stock_info.get('forwardPE', 'N/A'),
+            'PEG Ratio': stock_info.get('pegRatio', 'N/A'),
+            'Price/Book': stock_info.get('priceToBook', 'N/A'),
+            'Price/Sales': stock_info.get('priceToSalesTrailing12Months', 'N/A')
+        },
+        'Financial Health': {
+            'Quick Ratio': stock_info.get('quickRatio', 'N/A'),
+            'Current Ratio': stock_info.get('currentRatio', 'N/A'),
+            'Debt/Equity': stock_info.get('debtToEquity', 'N/A'),
+            'Return on Equity': stock_info.get('returnOnEquity', 'N/A'),
+            'Return on Assets': stock_info.get('returnOnAssets', 'N/A'),
+            'Operating Margins': stock_info.get('operatingMargins', 'N/A'),
+            'Profit Margins': stock_info.get('profitMargins', 'N/A')
+        },
+        'Growth & Performance': {
+            'Revenue Growth': stock_info.get('revenueGrowth', 'N/A'),
+            'Earnings Growth': stock_info.get('earningsGrowth', 'N/A'),
+            'Dividend Rate': stock_info.get('dividendRate', 'N/A'),
+            'Dividend Yield': stock_info.get('dividendYield', 'N/A'),
+            'Payout Ratio': stock_info.get('payoutRatio', 'N/A'),
+            'Beta': stock_info.get('beta', 'N/A'),
+            '52-Week High': stock_info.get('fiftyTwoWeekHigh', 'N/A'),
+            '52-Week Low': stock_info.get('fiftyTwoWeekLow', 'N/A')
+        }
+    }
 
-        # Process each news item
-        processed_news = []
-        for item in news:
-            try:
-                title = item.get('title', '')
-                timestamp = item.get('providerPublishTime', 0)
-                # Convert timestamp to timezone-naive datetime
-                date = pd.to_datetime(datetime.fromtimestamp(timestamp)).tz_localize(None)
-                blob = TextBlob(title)
-                sentiment = blob.sentiment.polarity
+    # Format the metrics
+    formatted_metrics = []
+    for category, category_metrics in metrics.items():
+        for metric, value in category_metrics.items():
+            formatted_value = value
+            if isinstance(value, (int, float)) and value != 'N/A':
+                if metric in ['Market Cap', 'Enterprise Value']:
+                    formatted_value = f"${value:,.0f}"
+                elif 'Ratio' in metric or metric in ['Beta', 'Price/Book', 'Price/Sales']:
+                    formatted_value = f"{value:.2f}"
+                elif '%' in metric or metric in ['Return on Equity', 'Return on Assets', 
+                                              'Operating Margins', 'Profit Margins',
+                                              'Revenue Growth', 'Earnings Growth',
+                                              'Dividend Yield', 'Payout Ratio']:
+                    formatted_value = f"{value:.2%}"
+                elif metric in ['Dividend Rate']:
+                    formatted_value = f"${value:.2f}"
+            formatted_metrics.append({
+                'Category': category,
+                'Metric': metric,
+                'Value': formatted_value
+            })
 
-                processed_news.append({
-                    'Timestamp': date,
-                    'Date': date.strftime('%Y-%m-%d'),
-                    'Time': date.strftime('%H:%M:%S'),
-                    'Title': title,
-                    'Sentiment': sentiment,
-                    'Sentiment Label': 'Positive' if sentiment > 0 else 'Negative' if sentiment < 0 else 'Neutral'
-                })
-            except Exception as e:
-                print(f"Error processing news item: {str(e)}")
-                continue
-
-        # Create DataFrame and sort by timestamp
-        news_df = pd.DataFrame(processed_news)
-        if news_df.empty:
-            print(f"No processable news found for {symbol}")
-            return pd.DataFrame(), 0, pd.DataFrame()
-
-        news_df = news_df.sort_values('Timestamp')
-
-        # Calculate overall sentiment
-        overall_sentiment = news_df['Sentiment'].mean()
-
-        # Create timeline data with both index and column for Timestamp
-        timeline_df = news_df.copy()
-        timeline_df.set_index('Timestamp', inplace=True)
-        timeline_df['Timestamp'] = timeline_df.index  # Keep Timestamp as column for plotting
-        timeline_df['Cumulative Sentiment'] = timeline_df['Sentiment'].expanding().mean()
-
-        return news_df, overall_sentiment, timeline_df
-
-    except Exception as e:
-        print(f"Error in sentiment analysis for {symbol}: {str(e)}")
-        return pd.DataFrame(), 0, pd.DataFrame()
-
-def get_key_metrics(stock_info):
-    """
-    Extract key financial metrics from stock info
-    """
-    metrics = {}
-    keys = [
-        'marketCap', 'trailingPE', 'forwardPE', 'dividendYield',
-        'fiftyTwoWeekHigh', 'fiftyTwoWeekLow', 'volume',
-        'averageVolume', 'priceToBook'
-    ]
-
-    for key in keys:
-        if key in stock_info:
-            value = stock_info[key]
-            if key == 'marketCap':
-                value = f"${value:,.0f}"
-            elif key in ['trailingPE', 'forwardPE', 'priceToBook']:
-                value = f"{value:.2f}"
-            elif key == 'dividendYield' and value is not None:
-                value = f"{value:.2%}"
-            metrics[key] = value
-        else:
-            metrics[key] = 'N/A'
-
-    return pd.DataFrame(metrics.items(), columns=['Metric', 'Value'])
+    return pd.DataFrame(formatted_metrics)
 
 def format_data_for_download(hist_data):
     """
