@@ -15,14 +15,14 @@ from reportlab.lib.units import inch
 
 # Page config
 st.set_page_config(
-    page_title="Stock Analysis Dashboard",
+    page_title="SPF Stock Pulse",
     page_icon="📈",
     layout="wide"
 )
 
 # Sidebar configuration
 with st.sidebar:
-    st.header("Configuration")
+    st.header("SPF Stock Pulse")
     # Stock selection
     symbols_input = st.text_input("Enter Stock Symbol", value="AAPL").upper()
     symbols = [symbols_input.strip()]
