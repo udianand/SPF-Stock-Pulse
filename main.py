@@ -14,42 +14,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# Theme toggle
+# Sidebar configuration
 with st.sidebar:
-    st.header("Settings")
-    # Theme toggle
-    theme = st.select_slider(
-        "Choose Theme",
-        options=["Light", "Dark"],
-        value="Light",
-        help="Toggle between light and dark mode"
-    )
-
-    # Apply theme
-    if theme == "Dark":
-        st.markdown("""
-            <style>
-                .stApp {
-                    background-color: #0E1117;
-                    color: #FAFAFA;
-                }
-                .stButton>button {
-                    color: #FAFAFA;
-                    background-color: #262730;
-                    border: 1px solid #4B4B4B;
-                }
-                .stTextInput>div>div>input {
-                    color: #FAFAFA;
-                    background-color: #262730;
-                }
-                .stSelectbox>div>div>select {
-                    color: #FAFAFA;
-                    background-color: #262730;
-                }
-            </style>
-            """, unsafe_allow_html=True)
-
-    st.divider()
     st.header("Configuration")
     # Multiple stock selection
     symbols_input = st.text_input("Enter Stock Symbols (comma-separated)", value="AAPL,MSFT").upper()
