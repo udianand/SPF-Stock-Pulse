@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
-from utils import get_stock_data, format_data_for_download, get_fundamental_metrics
+from utils import get_stock_data, format_data_for_download, get_fundamental_metrics, get_stock_news
 import io
 from plotly.subplots import make_subplots
 from prediction import StockPredictor
@@ -125,7 +125,7 @@ def generate_pdf_report(symbol, hist_data, stock_info, metrics_df):
 if symbols:
     # Create tabs for different analysis views
     tab1, tab2 = st.tabs([
-        "Investment Analysis", 
+        "Investment Analysis",
         "Trend Prediction"
     ])
 
@@ -161,6 +161,26 @@ if symbols:
                         file_name=f"{symbol}_analysis_report.pdf",
                         mime="application/pdf"
                     )
+
+            # Market News Section
+            st.subheader("Latest Market News")
+            news_items = get_stock_news(symbol)
+
+            if news_items:
+                for news in news_items:
+                    with st.expander(f"📰 {news['title']}", expanded=False):
+                        st.markdown(f"""
+                            **Published:** {news['published_at'].strftime('%Y-%m-%d %H:%M')}  
+                            **Source:** {news['publisher']}
+
+                            {news['summary']}
+
+                            [Read more]({news['link']})
+                        """)
+                        if news['related_tickers']:
+                            st.markdown(f"**Related Tickers:** {', '.join(news['related_tickers'])}")
+            else:
+                st.info("No recent news available for this stock.")
 
             # Stock price chart
             st.subheader("Historical Price Chart")

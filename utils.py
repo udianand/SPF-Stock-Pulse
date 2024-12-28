@@ -15,6 +15,35 @@ def get_stock_data(symbol, start_date, end_date):
         print(f"Error fetching stock data: {str(e)}")
         return None, None
 
+def get_stock_news(symbol: str, limit: int = 10) -> list:
+    """
+    Fetch latest news for a given stock symbol
+    """
+    try:
+        stock = yf.Ticker(symbol)
+        news = stock.news
+
+        # Process and format news items
+        formatted_news = []
+        for item in news[:limit]:
+            # Convert timestamp to datetime
+            news_datetime = datetime.fromtimestamp(item['providerPublishTime'])
+
+            formatted_news.append({
+                'title': item['title'],
+                'publisher': item['publisher'],
+                'link': item['link'],
+                'published_at': news_datetime,
+                'type': item.get('type', 'Article'),
+                'related_tickers': item.get('relatedTickers', []),
+                'summary': item.get('summary', '')
+            })
+
+        return formatted_news
+    except Exception as e:
+        print(f"Error fetching news data: {str(e)}")
+        return []
+
 def get_fundamental_metrics(stock_info):
     """
     Extract and format comprehensive financial metrics for fundamental analysis
