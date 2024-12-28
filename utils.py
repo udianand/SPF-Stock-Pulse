@@ -2,6 +2,11 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 import numpy as np
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def get_stock_data(symbol, start_date, end_date):
     """
@@ -12,7 +17,7 @@ def get_stock_data(symbol, start_date, end_date):
         hist = stock.history(start=start_date, end=end_date)
         return hist, stock.info
     except Exception as e:
-        print(f"Error fetching stock data: {str(e)}")
+        logger.error(f"Error fetching stock data: {str(e)}")
         return None, None
 
 def get_stock_news(symbol: str, limit: int = 10) -> list:
@@ -20,32 +25,41 @@ def get_stock_news(symbol: str, limit: int = 10) -> list:
     Fetch latest news for a given stock symbol
     """
     try:
+        logger.info(f"Fetching news for symbol: {symbol}")
         stock = yf.Ticker(symbol)
         news = stock.news
+
+        logger.info(f"Retrieved {len(news) if news else 0} news items")
 
         # Process and format news items
         formatted_news = []
         for item in news[:limit]:
-            # Handle different timestamp fields
-            timestamp = item.get('providerPublishTime') or item.get('publishedAt') or item.get('timestamp')
-            if timestamp:
-                news_datetime = datetime.fromtimestamp(timestamp)
-            else:
-                news_datetime = datetime.now()  # Fallback to current time if no timestamp
+            try:
+                # Handle different timestamp fields
+                timestamp = item.get('providerPublishTime') or item.get('publishedAt') or item.get('timestamp')
+                if timestamp:
+                    news_datetime = datetime.fromtimestamp(timestamp)
+                else:
+                    news_datetime = datetime.now()  # Fallback to current time if no timestamp
 
-            formatted_news.append({
-                'title': item.get('title', 'No Title'),
-                'publisher': item.get('publisher', 'Unknown Publisher'),
-                'link': item.get('link', '#'),
-                'published_at': news_datetime,
-                'type': item.get('type', 'Article'),
-                'related_tickers': item.get('relatedTickers', []),
-                'summary': item.get('summary', 'No summary available.')
-            })
+                formatted_item = {
+                    'title': item.get('title', 'No Title'),
+                    'publisher': item.get('publisher', 'Unknown Publisher'),
+                    'link': item.get('link', '#'),
+                    'published_at': news_datetime,
+                    'type': item.get('type', 'Article'),
+                    'related_tickers': item.get('relatedTickers', []),
+                    'summary': item.get('summary', 'No summary available.')
+                }
+                formatted_news.append(formatted_item)
+                logger.info(f"Successfully processed news item: {formatted_item['title']}")
+            except Exception as item_error:
+                logger.error(f"Error processing news item: {str(item_error)}")
+                continue
 
         return formatted_news
     except Exception as e:
-        print(f"Error fetching news data: {str(e)}")
+        logger.error(f"Error fetching news data: {str(e)}")
         return []
 
 def get_fundamental_metrics(stock_info):
