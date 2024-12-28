@@ -26,17 +26,21 @@ def get_stock_news(symbol: str, limit: int = 10) -> list:
         # Process and format news items
         formatted_news = []
         for item in news[:limit]:
-            # Convert timestamp to datetime
-            news_datetime = datetime.fromtimestamp(item['providerPublishTime'])
+            # Handle different timestamp fields
+            timestamp = item.get('providerPublishTime') or item.get('publishedAt') or item.get('timestamp')
+            if timestamp:
+                news_datetime = datetime.fromtimestamp(timestamp)
+            else:
+                news_datetime = datetime.now()  # Fallback to current time if no timestamp
 
             formatted_news.append({
-                'title': item['title'],
-                'publisher': item['publisher'],
-                'link': item['link'],
+                'title': item.get('title', 'No Title'),
+                'publisher': item.get('publisher', 'Unknown Publisher'),
+                'link': item.get('link', '#'),
                 'published_at': news_datetime,
                 'type': item.get('type', 'Article'),
                 'related_tickers': item.get('relatedTickers', []),
-                'summary': item.get('summary', '')
+                'summary': item.get('summary', 'No summary available.')
             })
 
         return formatted_news
