@@ -15,9 +15,9 @@ def get_stock_data(symbol, start_date, end_date):
         print(f"Error fetching stock data: {str(e)}")
         return None, None
 
-def get_morningstar_metrics(stock_info):
+def get_fundamental_metrics(stock_info):
     """
-    Extract and format comprehensive financial metrics in Morningstar style
+    Extract and format comprehensive financial metrics for fundamental analysis
     """
     if not stock_info:
         return pd.DataFrame()

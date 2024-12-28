@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
-from utils import get_stock_data, format_data_for_download, get_morningstar_metrics
+from utils import get_stock_data, format_data_for_download, get_fundamental_metrics
 import io
 from plotly.subplots import make_subplots
 from strategy_simulator import InvestmentStrategy
@@ -84,10 +84,10 @@ if symbols:
                 )
                 st.plotly_chart(fig, use_container_width=True, key=f"price_chart_{symbol}")
 
-                # Replace sentiment analysis section with Morningstar Report
-                st.subheader("Morningstar-Style Report")
+                # Replace Morningstar section with Fundamental Analysis
+                st.subheader("Fundamental Analysis Report")
 
-                metrics_df = get_morningstar_metrics(stock_info)
+                metrics_df = get_fundamental_metrics(stock_info)
                 if not metrics_df.empty:
                     # Display metrics by category
                     for category in metrics_df['Category'].unique():
@@ -152,11 +152,11 @@ if symbols:
                 )
                 st.plotly_chart(fig, use_container_width=True, key="price_comparison")
 
-                # Metrics Comparison
+                # Update the comparison section header
                 st.subheader("Fundamental Metrics Comparison")
                 metrics_comparison = []
                 for symbol in symbols:
-                    metrics_df = get_morningstar_metrics(stock_data[symbol]['info'])
+                    metrics_df = get_fundamental_metrics(stock_data[symbol]['info'])
                     if not metrics_df.empty:
                         # Pivot the metrics for side-by-side comparison
                         symbol_metrics = metrics_df.set_index(['Category', 'Metric'])['Value']
@@ -187,9 +187,9 @@ if symbols:
             col1, col2 = st.columns(2)
             with col1:
                 initial_capital = st.number_input("Initial Capital ($)", 
-                                               min_value=1000.0, 
-                                               value=10000.0, 
-                                               step=1000.0)
+                                                min_value=1000.0, 
+                                                value=10000.0, 
+                                                step=1000.0)
 
             # Run simulation button
             if st.button("Run Simulation", key="run_sim"):
@@ -209,11 +209,11 @@ if symbols:
                     # Display results
                     col1, col2, col3 = st.columns(3)
                     col1.metric("Final Portfolio Value", 
-                              f"${results['final_value']:,.2f}")
+                                f"${results['final_value']:,.2f}")
                     col2.metric("Total Return", 
-                              results['total_return_pct'])
+                                results['total_return_pct'])
                     col3.metric("Sharpe Ratio", 
-                              f"{results['sharpe_ratio']:.2f}")
+                                f"{results['sharpe_ratio']:.2f}")
 
                     # Portfolio value chart
                     st.subheader("Portfolio Value Over Time")
@@ -255,13 +255,13 @@ if symbols:
                     st.subheader("Risk Metrics")
                     metrics_df = pd.DataFrame({
                         'Metric': ['Initial Capital', 'Final Value', 'Total Return', 
-                                  'Sharpe Ratio', 'Max Drawdown', 'Number of Trades'],
+                                    'Sharpe Ratio', 'Max Drawdown', 'Number of Trades'],
                         'Value': [f"${results['initial_capital']:,.2f}",
-                                 f"${results['final_value']:,.2f}",
-                                 results['total_return_pct'],
-                                 f"{results['sharpe_ratio']:.2f}",
-                                 results['max_drawdown_pct'],
-                                 results['trades_count']]
+                                    f"${results['final_value']:,.2f}",
+                                    results['total_return_pct'],
+                                    f"{results['sharpe_ratio']:.2f}",
+                                    results['max_drawdown_pct'],
+                                    results['trades_count']]
                     })
                     st.table(metrics_df)
                 else:
