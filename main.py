@@ -168,17 +168,14 @@ if symbols:
 
             if news_items:
                 for news in news_items:
-                    with st.expander(f"📰 {news['title']}", expanded=False):
-                        st.markdown(f"""
-                            **Published:** {news['published_at'].strftime('%Y-%m-%d %H:%M')}  
-                            **Source:** {news['publisher']}
+                    st.markdown(f"""
+                        **{news['title']}**
 
-                            {news['summary']}
+                        {news['summary']}
 
-                            [Read more]({news['link']})
-                        """)
-                        if news['related_tickers']:
-                            st.markdown(f"**Related Tickers:** {', '.join(news['related_tickers'])}")
+                        [Read more]({news['link']})
+                        ---
+                    """)
             else:
                 st.info("No recent news available for this stock.")
 
