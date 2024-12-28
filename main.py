@@ -167,17 +167,20 @@ if symbols:
             news_items = get_stock_news(symbol)
 
             if news_items:
-                for news in news_items:
-                    st.markdown(f"""
-                        **{news['title']}**
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    for news in news_items:
+                        if news.get('title') and news.get('summary'):
+                            st.markdown(f"""
+                                ### {news['title']}
 
-                        {news['summary']}
+                                {news['summary'][:200]}... 
 
-                        [Read more]({news['link']})
-                        ---
-                    """)
+                                [Read full article]({news['link']})
+                                ___
+                            """)
             else:
-                st.info("No recent news available for this stock.")
+                st.warning(f"Unable to fetch news for {symbol}. Please try again later.")
 
             # Stock price chart
             st.subheader("Historical Price Chart")
