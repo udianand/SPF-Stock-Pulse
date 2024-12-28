@@ -2,6 +2,7 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 import numpy as np
+from textblob import TextBlob
 
 def get_stock_data(symbol, start_date, end_date):
     """
@@ -64,16 +65,21 @@ def get_fundamental_metrics(stock_info):
                 elif 'Ratio' in metric or metric in ['Beta', 'Price/Book', 'Price/Sales']:
                     formatted_value = f"{value:.2f}"
                 elif '%' in metric or metric in ['Return on Equity', 'Return on Assets', 
-                                              'Operating Margins', 'Profit Margins',
-                                              'Revenue Growth', 'Earnings Growth',
-                                              'Dividend Yield', 'Payout Ratio']:
+                                               'Operating Margins', 'Profit Margins',
+                                               'Revenue Growth', 'Earnings Growth',
+                                               'Dividend Yield', 'Payout Ratio']:
                     formatted_value = f"{value:.2%}"
                 elif metric in ['Dividend Rate']:
                     formatted_value = f"${value:.2f}"
+
+            # Generate AI insight for the metric
+            insight = generate_metric_insight(metric, value, category)
+
             formatted_metrics.append({
                 'Category': category,
                 'Metric': metric,
-                'Value': formatted_value
+                'Value': formatted_value,
+                'Insight': insight
             })
 
     return pd.DataFrame(formatted_metrics)
@@ -86,3 +92,80 @@ def format_data_for_download(hist_data):
     df.index = df.index.strftime('%Y-%m-%d')
     df = df.round(2)
     return df
+
+def generate_metric_insight(metric: str, value: float, category: str) -> str:
+    """
+    Generate AI-powered insights for financial metrics
+    """
+    if value == 'N/A':
+        return "Data not available for analysis"
+
+    insights = {
+        'P/E Ratio': {
+            'low': "The stock appears relatively undervalued compared to its earnings",
+            'medium': "The stock is trading at a reasonable multiple of its earnings",
+            'high': "The stock might be overvalued relative to its earnings"
+        },
+        'Beta': {
+            'low': "The stock shows lower volatility than the market",
+            'medium': "The stock moves similarly to the market",
+            'high': "The stock shows higher volatility than the market"
+        },
+        'Debt/Equity': {
+            'low': "The company has a conservative financial structure",
+            'medium': "The company maintains a balanced debt level",
+            'high': "The company has significant leverage, which may increase risk"
+        },
+        'Quick Ratio': {
+            'low': "The company might face challenges meeting short-term obligations",
+            'medium': "The company has adequate liquidity",
+            'high': "The company maintains strong short-term financial health"
+        },
+        'Dividend Yield': {
+            'low': "The stock offers a modest dividend income",
+            'medium': "The stock provides a competitive dividend yield",
+            'high': "The stock offers an attractive dividend income"
+        }
+    }
+
+    try:
+        if isinstance(value, (int, float)):
+            if metric == 'P/E Ratio':
+                if value < 15:
+                    return insights[metric]['low']
+                elif value < 25:
+                    return insights[metric]['medium']
+                else:
+                    return insights[metric]['high']
+            elif metric == 'Beta':
+                if value < 0.8:
+                    return insights[metric]['low']
+                elif value < 1.2:
+                    return insights[metric]['medium']
+                else:
+                    return insights[metric]['high']
+            elif metric == 'Debt/Equity':
+                if value < 0.3:
+                    return insights[metric]['low']
+                elif value < 0.7:
+                    return insights[metric]['medium']
+                else:
+                    return insights[metric]['high']
+            elif metric == 'Quick Ratio':
+                if value < 1:
+                    return insights[metric]['low']
+                elif value < 1.5:
+                    return insights[metric]['medium']
+                else:
+                    return insights[metric]['high']
+            elif metric == 'Dividend Yield':
+                if value < 0.02:
+                    return insights[metric]['low']
+                elif value < 0.04:
+                    return insights[metric]['medium']
+                else:
+                    return insights[metric]['high']
+    except:
+        pass
+
+    return "Click for detailed analysis of this metric"

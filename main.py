@@ -196,10 +196,27 @@ if symbols:
                     for i, (_, row) in enumerate(category_metrics.iterrows()):
                         col_idx = i % 2
                         with cols[col_idx]:
-                            st.metric(
-                                label=row['Metric'],
-                                value=row['Value']
-                            )
+                            # Add tooltip with AI insight
+                            metric_container = st.container()
+                            with metric_container:
+                                st.metric(
+                                    label=row['Metric'],
+                                    value=row['Value'],
+                                    help=row['Insight']  # This adds a tooltip with AI-generated insight
+                                )
+
+                                # Add a small info icon that shows detailed explanation on hover
+                                st.markdown(
+                                    f"""
+                                    <div class='tooltip-container'>
+                                        <span>ℹ️</span>
+                                        <div class='tooltip-content'>
+                                            {row['Insight']}
+                                        </div>
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True
+                                )
                     st.divider()
             else:
                 st.warning("Unable to fetch detailed metrics for this stock.")
@@ -299,3 +316,47 @@ if symbols:
 
 else:
     st.info("Please enter a stock symbol to begin analysis.")
+
+# Add custom CSS for tooltips
+st.markdown(
+    """
+    <style>
+    /* Tooltip container */
+    .tooltip-container {
+        position: relative;
+        display: inline-block;
+        margin-left: 5px;
+    }
+
+    /* Tooltip content */
+    .tooltip-content {
+        visibility: hidden;
+        background-color: var(--secondary-background-color);
+        color: var(--text-color);
+        text-align: center;
+        padding: 5px;
+        border-radius: 6px;
+        border: 1px solid var(--primary-color);
+
+        /* Position the tooltip */
+        position: absolute;
+        z-index: 1;
+        width: 200px;
+        bottom: 100%;
+        left: 50%;
+        margin-left: -100px;
+
+        /* Fade in */
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    /* Show tooltip on hover */
+    .tooltip-container:hover .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
