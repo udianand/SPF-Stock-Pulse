@@ -96,7 +96,7 @@ if symbols:
                     # Sentiment Timeline
                     fig_timeline = go.Figure()
                     fig_timeline.add_trace(go.Scatter(
-                        x=timeline_df['Timestamp'],
+                        x=timeline_df.index,  # Use index instead of Timestamp column
                         y=timeline_df['Sentiment'],
                         mode='markers',
                         name='Individual Sentiment',
@@ -108,7 +108,7 @@ if symbols:
                         )
                     ))
                     fig_timeline.add_trace(go.Scatter(
-                        x=timeline_df['Timestamp'],
+                        x=timeline_df.index,  # Use index instead of Timestamp column
                         y=timeline_df['Cumulative Sentiment'],
                         mode='lines',
                         name='Cumulative Average Sentiment',
@@ -190,7 +190,7 @@ if symbols:
                         # Add sentiment points
                         fig.add_trace(
                             go.Scatter(
-                                x=timeline_df['Timestamp'],
+                                x=timeline_df.index,  # Use index instead of Timestamp column
                                 y=timeline_df['Sentiment'],
                                 mode='markers',
                                 name=f'{symbol} Sentiment',
@@ -207,7 +207,7 @@ if symbols:
                         # Add moving average line
                         fig.add_trace(
                             go.Scatter(
-                                x=timeline_df['Timestamp'],
+                                x=timeline_df.index,  # Use index instead of Timestamp column
                                 y=timeline_df['Cumulative Sentiment'],
                                 mode='lines',
                                 name=f'{symbol} Trend',
