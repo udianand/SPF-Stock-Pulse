@@ -14,15 +14,42 @@ st.set_page_config(
     layout="wide"
 )
 
-# Title and description
-st.title("📈 Stock Analysis Dashboard")
-st.markdown("""
-This dashboard provides financial analysis and historical data for stocks. 
-Enter stock symbols to analyze and compare.
-""")
-
-# Sidebar inputs
+# Theme toggle
 with st.sidebar:
+    st.header("Settings")
+    # Theme toggle
+    theme = st.select_slider(
+        "Choose Theme",
+        options=["Light", "Dark"],
+        value="Light",
+        help="Toggle between light and dark mode"
+    )
+
+    # Apply theme
+    if theme == "Dark":
+        st.markdown("""
+            <style>
+                .stApp {
+                    background-color: #0E1117;
+                    color: #FAFAFA;
+                }
+                .stButton>button {
+                    color: #FAFAFA;
+                    background-color: #262730;
+                    border: 1px solid #4B4B4B;
+                }
+                .stTextInput>div>div>input {
+                    color: #FAFAFA;
+                    background-color: #262730;
+                }
+                .stSelectbox>div>div>select {
+                    color: #FAFAFA;
+                    background-color: #262730;
+                }
+            </style>
+            """, unsafe_allow_html=True)
+
+    st.divider()
     st.header("Configuration")
     # Multiple stock selection
     symbols_input = st.text_input("Enter Stock Symbols (comma-separated)", value="AAPL,MSFT").upper()
@@ -37,6 +64,7 @@ with st.sidebar:
         start_date = st.date_input("Start Date", value=start_date)
     with date_col2:
         end_date = st.date_input("End Date", value=end_date)
+
 
 # Main content
 if symbols:
