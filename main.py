@@ -6,6 +6,7 @@ from utils import get_stock_data, format_data_for_download, get_fundamental_metr
 import io
 from plotly.subplots import make_subplots
 from strategy_simulator import InvestmentStrategy
+from prediction import StockPredictor
 
 # Page config
 st.set_page_config(
@@ -35,7 +36,12 @@ with st.sidebar:
 # Main content
 if symbols:
     # Create tabs for different analysis views
-    tab1, tab2, tab3 = st.tabs(["Individual Analysis", "Comparison Analysis", "Strategy Simulator"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Individual Analysis", 
+        "Comparison Analysis", 
+        "Strategy Simulator",
+        "Trend Prediction"
+    ])
 
     with tab1:
         # Individual stock analysis
@@ -262,6 +268,100 @@ if symbols:
                     st.error("Could not fetch required data for simulation. Please check the selected stock and date range.")
         else:
             st.info("Please enter at least one stock symbol to run the strategy simulation.")
+
+    with tab4:
+        if len(symbols) > 0:
+            st.header("Stock Trend Prediction")
+
+            # Select stock for prediction
+            symbol = st.selectbox(
+                "Select Stock for Prediction",
+                options=symbols,
+                key="predict_stock"
+            )
+
+            # Get data for selected stock
+            hist_data, _ = get_stock_data(symbol, start_date, end_date)
+
+            if hist_data is not None:
+                predictor = StockPredictor()
+
+                # Train model and show metrics
+                with st.spinner("Training prediction model..."):
+                    metrics = predictor.train(hist_data)
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric(
+                            "Training Score",
+                            f"{metrics['train_score']:.2%}"
+                        )
+                    with col2:
+                        st.metric(
+                            "Testing Score",
+                            f"{metrics['test_score']:.2%}"
+                        )
+
+                # Make prediction
+                prediction = predictor.predict_next_day(hist_data)
+
+                # Display prediction results
+                st.subheader("Price Prediction")
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.metric(
+                        "Current Price",
+                        f"${prediction['current_price']:.2f}"
+                    )
+                with col2:
+                    st.metric(
+                        "Predicted Price",
+                        f"${prediction['predicted_price']:.2f}"
+                    )
+                with col3:
+                    st.metric(
+                        "Predicted Change",
+                        f"{prediction['predicted_change_percent']:.2f}%",
+                        delta=f"{prediction['predicted_change_percent']:.2f}%"
+                    )
+
+                # Feature importance
+                st.subheader("Feature Importance")
+                importance_df = pd.DataFrame(
+                    sorted(metrics['feature_importance'].items(),
+                          key=lambda x: x[1],
+                          reverse=True),
+                    columns=['Feature', 'Importance']
+                )
+
+                fig = go.Figure(go.Bar(
+                    x=importance_df['Feature'],
+                    y=importance_df['Importance'],
+                    text=importance_df['Importance'].round(3),
+                    textposition='auto',
+                ))
+
+                fig.update_layout(
+                    title="Feature Importance in Prediction",
+                    xaxis_title="Features",
+                    yaxis_title="Importance Score",
+                    template='plotly_white',
+                    height=400
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Disclaimer
+                st.warning("""
+                    **Disclaimer:** This prediction is based on historical data and technical analysis.
+                    It should not be used as the sole basis for investment decisions.
+                    Past performance does not guarantee future results.
+                """)
+            else:
+                st.error("Could not fetch required data for prediction. Please check the selected stock and date range.")
+        else:
+            st.info("Please enter at least one stock symbol to run the prediction model.")
 
 else:
     st.info("Please enter stock symbols to begin analysis.")
