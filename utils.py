@@ -20,60 +20,6 @@ def get_stock_data(symbol, start_date, end_date):
         logger.error(f"Error fetching stock data: {str(e)}")
         return None, None
 
-def get_stock_news(symbol: str, limit: int = 10) -> list:
-    """
-    Fetch latest news for a given stock symbol
-    """
-    try:
-        logger.info(f"Fetching news for symbol: {symbol}")
-        stock = yf.Ticker(symbol)
-
-        # Fetch news data
-        news = stock.news
-        if not news:
-            logger.warning(f"No news found for symbol: {symbol}")
-            return []
-
-        logger.info(f"Retrieved {len(news)} news items")
-
-        # Process and format news items
-        formatted_news = []
-        for item in news[:limit]:
-            try:
-                if not isinstance(item, dict):
-                    logger.warning(f"Unexpected news item format: {type(item)}")
-                    continue
-
-                # Log raw item for debugging
-                logger.debug(f"Processing news item: {item}")
-
-                # Extract and validate title and summary
-                title = item.get('title')
-                summary = item.get('summary')
-                link = item.get('link')
-
-                if not title or not summary or not link:
-                    logger.warning("Missing required news item fields")
-                    continue
-
-                formatted_item = {
-                    'title': title,
-                    'summary': summary,
-                    'link': link
-                }
-
-                formatted_news.append(formatted_item)
-                logger.info(f"Successfully processed news item: {title}")
-
-            except Exception as item_error:
-                logger.error(f"Error processing news item: {str(item_error)}")
-                continue
-
-        return formatted_news
-
-    except Exception as e:
-        logger.error(f"Error fetching news data: {str(e)}")
-        return []
 
 def get_fundamental_metrics(stock_info):
     """
@@ -124,9 +70,9 @@ def get_fundamental_metrics(stock_info):
                 elif 'Ratio' in metric or metric in ['Beta', 'Price/Book', 'Price/Sales']:
                     formatted_value = f"{value:.2f}"
                 elif '%' in metric or metric in ['Return on Equity', 'Return on Assets', 
-                                               'Operating Margins', 'Profit Margins',
-                                               'Revenue Growth', 'Earnings Growth',
-                                               'Dividend Yield', 'Payout Ratio']:
+                                            'Operating Margins', 'Profit Margins',
+                                            'Revenue Growth', 'Earnings Growth',
+                                            'Dividend Yield', 'Payout Ratio']:
                     formatted_value = f"{value:.2%}"
                 elif metric in ['Dividend Rate']:
                     formatted_value = f"${value:.2f}"

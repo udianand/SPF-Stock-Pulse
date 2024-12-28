@@ -2,7 +2,7 @@ import streamlit as st
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import pandas as pd
-from utils import get_stock_data, format_data_for_download, get_fundamental_metrics, get_stock_news
+from utils import get_stock_data, format_data_for_download, get_fundamental_metrics
 import io
 from plotly.subplots import make_subplots
 from prediction import StockPredictor
@@ -161,26 +161,6 @@ if symbols:
                         file_name=f"{symbol}_analysis_report.pdf",
                         mime="application/pdf"
                     )
-
-            # Market News Section
-            st.subheader("Latest Market News")
-            news_items = get_stock_news(symbol)
-
-            if news_items:
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    for news in news_items:
-                        if news.get('title') and news.get('summary'):
-                            st.markdown(f"""
-                                ### {news['title']}
-
-                                {news['summary'][:200]}... 
-
-                                [Read full article]({news['link']})
-                                ___
-                            """)
-            else:
-                st.warning(f"Unable to fetch news for {symbol}. Please try again later.")
 
             # Stock price chart
             st.subheader("Historical Price Chart")
