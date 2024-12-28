@@ -184,12 +184,31 @@ if symbols:
 
             # Simulation parameters
             st.subheader("Simulation Parameters")
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 initial_capital = st.number_input("Initial Capital ($)", 
-                                                min_value=1000.0, 
-                                                value=10000.0, 
-                                                step=1000.0)
+                                               min_value=1000.0, 
+                                               value=10000.0, 
+                                               step=1000.0)
+            with col2:
+                strategy_type = st.selectbox(
+                    "Trading Strategy",
+                    options=['ma_crossover', 'rsi', 'macd'],
+                    help="""
+                    MA Crossover: Uses 20 and 50-day moving averages
+                    RSI: Uses Relative Strength Index
+                    MACD: Uses Moving Average Convergence Divergence
+                    """
+                )
+            with col3:
+                risk_per_trade = st.slider(
+                    "Risk per Trade (%)",
+                    min_value=1.0,
+                    max_value=5.0,
+                    value=2.0,
+                    step=0.5,
+                    help="Maximum risk per trade as percentage of portfolio"
+                ) / 100
 
             # Run simulation button
             if st.button("Run Simulation", key="run_sim"):
@@ -198,25 +217,23 @@ if symbols:
                 hist_data, _ = get_stock_data(symbol, start_date, end_date)
 
                 if hist_data is not None:
-                    # Calculate technical indicators
-                    hist_data['SMA_20'] = hist_data['Close'].rolling(window=20).mean()
-                    hist_data['SMA_50'] = hist_data['Close'].rolling(window=50).mean()
-
                     # Run simulation
                     strategy = InvestmentStrategy(initial_capital=initial_capital)
-                    results = strategy.simulate(hist_data, pd.DataFrame())  # Empty sentiment data
+                    results = strategy.simulate(hist_data, strategy_type, risk_per_trade)
 
                     # Display results
-                    col1, col2, col3 = st.columns(3)
+                    col1, col2, col3, col4 = st.columns(4)
                     col1.metric("Final Portfolio Value", 
-                                f"${results['final_value']:,.2f}")
+                               f"${results['final_value']:,.2f}")
                     col2.metric("Total Return", 
-                                results['total_return_pct'])
+                               results['total_return_pct'])
                     col3.metric("Sharpe Ratio", 
-                                f"{results['sharpe_ratio']:.2f}")
+                               f"{results['sharpe_ratio']:.2f}")
+                    col4.metric("Win Rate",
+                               results['win_rate'])
 
                     # Portfolio value chart
-                    st.subheader("Portfolio Value Over Time")
+                    st.subheader("Portfolio Performance")
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
                         x=results['portfolio_history']['dates'],
@@ -231,7 +248,7 @@ if symbols:
                         line=dict(color='green', dash='dash')
                     ))
                     fig.update_layout(
-                        title="Portfolio Performance",
+                        title="Portfolio Value Over Time",
                         xaxis_title="Date",
                         yaxis_title="Value ($)",
                         template='plotly_white',
@@ -247,23 +264,51 @@ if symbols:
                             lambda x: -x['value'] if x['type'] == 'buy' else x['value'],
                             axis=1
                         )
-                        st.dataframe(trades_df[['date', 'type', 'shares', 'price', 'value']])
+                        st.dataframe(
+                            trades_df[['date', 'type', 'shares', 'price', 'value']],
+                            use_container_width=True
+                        )
                     else:
                         st.info("No trades were executed during the simulation period.")
 
-                    # Additional metrics
-                    st.subheader("Risk Metrics")
+                    # Risk metrics
+                    st.subheader("Risk & Performance Metrics")
                     metrics_df = pd.DataFrame({
                         'Metric': ['Initial Capital', 'Final Value', 'Total Return', 
-                                    'Sharpe Ratio', 'Max Drawdown', 'Number of Trades'],
+                                 'Sharpe Ratio', 'Max Drawdown', 'Win Rate', 'Number of Trades'],
                         'Value': [f"${results['initial_capital']:,.2f}",
-                                    f"${results['final_value']:,.2f}",
-                                    results['total_return_pct'],
-                                    f"{results['sharpe_ratio']:.2f}",
-                                    results['max_drawdown_pct'],
-                                    results['trades_count']]
+                                 f"${results['final_value']:,.2f}",
+                                 results['total_return_pct'],
+                                 f"{results['sharpe_ratio']:.2f}",
+                                 results['max_drawdown_pct'],
+                                 results['win_rate'],
+                                 results['trades_count']]
                     })
                     st.table(metrics_df)
+
+                    # Strategy explanation
+                    st.subheader("Strategy Explanation")
+                    strategy_explanations = {
+                        'ma_crossover': """
+                        The Moving Average Crossover strategy uses 20 and 50-day moving averages to generate trading signals.
+                        - Buy when the 20-day MA crosses above the 50-day MA
+                        - Sell when the 20-day MA crosses below the 50-day MA
+                        Signal strength is adjusted based on the distance between moving averages.
+                        """,
+                        'rsi': """
+                        The Relative Strength Index (RSI) strategy uses overbought and oversold levels to generate trading signals.
+                        - Buy when RSI drops below 30 (oversold)
+                        - Sell when RSI rises above 70 (overbought)
+                        """,
+                        'macd': """
+                        The Moving Average Convergence Divergence (MACD) strategy uses the MACD line and signal line crossovers.
+                        - Buy when MACD crosses above the signal line
+                        - Sell when MACD crosses below the signal line
+                        Signal strength is adjusted based on the momentum of the crossover.
+                        """
+                    }
+                    st.markdown(strategy_explanations[strategy_type])
+
                 else:
                     st.error("Could not fetch required data for simulation. Please check the selected stock and date range.")
         else:
