@@ -66,7 +66,8 @@ def get_news_sentiment(symbol):
         for item in news:  # Process all available news items
             title = item.get('title', '')
             timestamp = item.get('providerPublishTime', 0)
-            date = datetime.fromtimestamp(timestamp)
+            # Convert timestamp to timezone-naive datetime
+            date = pd.to_datetime(datetime.fromtimestamp(timestamp)).tz_localize(None)
             blob = TextBlob(title)
             sentiment = blob.sentiment.polarity
 
@@ -89,6 +90,9 @@ def get_news_sentiment(symbol):
 
             # Create timeline data
             timeline_df = news_df.copy()
+            # Ensure timezone-naive datetime index
+            timeline_df.set_index('Timestamp', inplace=True)
+            timeline_df.index = timeline_df.index.tz_localize(None)
             timeline_df['Cumulative Sentiment'] = timeline_df['Sentiment'].expanding().mean()
 
             return news_df, overall_sentiment, timeline_df
